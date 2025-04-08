@@ -3,18 +3,21 @@ import requests
 
 app = Flask(__name__)
 
-OLLAMA_API_URL = 'http://127.0.0.1:11434/api/chat'
+OLLAMA_API_URL = 'http://127.0.0.1:11434/api/generate'
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
+
+
 @app.route('/chat', methods=['POST'])
 def chat():
     user_message = request.json.get('message')
     response = requests.post(OLLAMA_API_URL, json={
-        'model': 'gemma3:4',
-        'prompt': user_message
+        'model': 'gemma3:4b',
+        'prompt': user_message,
+        "stream": False
     })
     return jsonify(response.json())
 
