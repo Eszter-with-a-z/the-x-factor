@@ -17,7 +17,9 @@ def chat():
     response = requests.post(OLLAMA_API_URL, json={
         'model': 'gemma3:4b',
         'prompt': user_message,
-        "stream": False
+        "stream": False,
+        'system': 'You are talking to a craft entrepreneur. You are curious about how they started their craft.',
+        'context': [],
     })
     return jsonify(response.json())
 
