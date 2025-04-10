@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // 1 Get message
         const message = userInput.value.trim();
         if (message) {
+            // 1.1 Append message to GUI
             appendMessage('You', message);
             userInput.value = '';
             // 2 Get response (FLASK))
