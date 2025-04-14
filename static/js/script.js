@@ -25,8 +25,10 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(response => response.json())
             // 3 Append response data to GUI
             .then(data => {
+                const audio = new Audio(data.audio_url);
+                audio.play();
                 appendMessage('Gemma 3', data.response);
-                speakText(data.response);  // 🔊 Speak the response
+                //speakText(data.response);  // Speak the response
             })
             .catch(error => {
                 console.error('Error:', error);

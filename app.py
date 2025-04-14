@@ -5,7 +5,7 @@ import time
 import os
 # Global memory for storing chat histories per session ID
 from uuid import uuid4
-
+import asyncio
 
 
 '''
@@ -93,7 +93,11 @@ def chat():
     history.append({"role": "assistant", "content": ai_reply})
     user_data['chat_history'] = history
 
-    return jsonify({"response": ai_reply})
+    # Generate TTS using Edge
+    audio_path = os.path.join("static", "audio", "response.mp3")
+    asyncio.run(my_functions.generate_speech(ai_reply, audio_path))
+    return jsonify({"response": ai_reply,
+                    "audio_url": "/static/audio/response.mp3"})
 
 
 if __name__ == '__main__':
