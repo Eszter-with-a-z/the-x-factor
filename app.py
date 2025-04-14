@@ -97,12 +97,20 @@ def chat():
 
     # Generate TTS using Edge
     #   Create file
+    #    Make sure it downloads the file again even though it has the same name
+    #       Delete the old audio file if it exists
     audio_path = os.path.join("static", "audio", "response.mp3")
+    if os.path.exists(audio_path):
+        try:
+            os.remove(audio_path)
+        except Exception as e:
+            print(f"Failed to delete old audio file: {e}")
     #   Generate speech
     asyncio.run(my_functions.generate_speech(ai_reply, audio_path))
     # Return response and path to frontend
     return jsonify({"response": ai_reply,
-                    "audio_url": "/static/audio/response.mp3"})
+                    "audio_url": "/static/audio/response.mp3?nocache=" + str(uuid4())
+    })
 
 
 if __name__ == '__main__':

@@ -1,2 +1,4 @@
+asyncio
+edge-tts
 Flask
 requests
