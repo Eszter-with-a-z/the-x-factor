@@ -8,7 +8,6 @@ from uuid import uuid4
 # For TTS
 import asyncio
 
-
 '''
 Steps to initialize The Human Touch prototype (even though file name is X factor)
 1. Open VS Code. From bash, run:
@@ -28,6 +27,7 @@ OLLAMA_API_URL = 'http://127.0.0.1:11434/api/chat'
 # Render index.html
 @app.route('/')
 def index():
+
     session.clear()
     session['user_id'] = str(uuid4())  # assign a new ID to this session
     user_data_store[session['user_id']] = { # maybe delete session
@@ -59,24 +59,30 @@ def chat():
     # If it's the first message, prompt a reflective question
     if user_data['exchange_count'] == 1:
         system_prompt = f"""
+        Start with 'hmm...'
         You're talking to a craft entrepreneur.
-        You are a curious chatbot willing to understand what makes the crafter and their carfts .
-        Start by asking them about what they are doing at the moment.
-        Then continue the conversation naturally, asking follow-up questions.
+        You are a curious chatbot, genuinely interested in understanding what drives them and their work.
+        Start by asking them what they’re working on right now.
+        Keep your response short — no more than 2–3 natural-sounding sentences.
+        Do not use Markdown, formatting symbols, or bullet points — reply in plain, conversational English.
         """
     elif user_data['exchange_count'] == 2:
         system_prompt = f"""
-        Continue the conversation with generative questions.
-        Ask a thoughtful, reflective question that combines their current activity and the topic of {topic}.
-        Your answer must be maximum as long as their previous answer.
+        Start with saying'hmm...'
+        You're talking to a craft entrepreneur.
+        Keep the conversation going with thoughtprovoking, reflective questions.
+        Base your reply on what they just said and gently connect it to the topic of {topic}.
+        Keep it short: 2–3 full sentences at most.
+        Do not use Markdown formatting — speak in plain, natural language.
         """
     else:
         system_prompt = f"""
-        Continue the conversation with thoughtful reflections. 
-        If it's been around 5 minutes (or 3-5 messages), gracefully offer a choice:
-        Either Continue talking,
-        Or get help creating a social media caption and photo-taking instructions for Instagram and Facebook.
-        Your answer must be maximum as long as their previous answer. 
+        Start with 'hmm...'
+        Continue the conversation with thoughtful, human reflections.
+        If it's been around 3–5 messages, offer them a gentle choice:
+        Continue chatting, or get help crafting a social media caption and photo idea for Instagram and Facebook.
+        Responses should be 2–3 natural-sounding sentences, maximum.
+        No Markdown or formatting — just speak clearly and conversationally 
         """
         # Elaborate on what social media outcome you would like, modularity, tone (own voice)
      # Build messages list
@@ -100,11 +106,7 @@ def chat():
     #    Make sure it downloads the file again even though it has the same name
     #       Delete the old audio file if it exists
     audio_path = os.path.join("static", "audio", "response.mp3")
-    if os.path.exists(audio_path):
-        try:
-            os.remove(audio_path)
-        except Exception as e:
-            print(f"Failed to delete old audio file: {e}")
+    my_functions.delete_previous_audio(audio_path)
     #   Generate speech
     asyncio.run(my_functions.generate_speech(ai_reply, audio_path))
     # Return response and path to frontend
