@@ -13,8 +13,7 @@ Steps to initialize The Human Touch prototype (even though file name is X factor
 1. Open VS Code. From bash, run:
 ollama run gemma3:4b
 2. Start Flask: click on run in app.py
-3. For session key, run in bash: export FLASK_SECRET_KEY=$(py -c 'import secrets; print(secrets.token_hex(
-32))')
+3. For session key, run in bash: export FLASK_SECRET_KEY=$(py -c 'import secrets; print(secrets.token_hex(32))') (? each time?)
 
 '''
 # Initialize Flask application

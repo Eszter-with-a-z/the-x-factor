@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // 3 Append response data to GUI
             .then(data => {
                 appendMessage('Gemma 3', data.response);
+                speakText(data.response);  // 🔊 Speak the response
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -39,5 +40,16 @@ document.addEventListener('DOMContentLoaded', function () {
         chatBox.appendChild(messageElement);
         // Scroll to the bottom to see the newest message
         chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // ✅ Text-to-speech function
+    function speakText(text) {
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US'; // or any other language code
+            window.speechSynthesis.speak(utterance);
+        } else {
+            console.warn('TTS not supported in this browser.');
+        }
     }
 });
