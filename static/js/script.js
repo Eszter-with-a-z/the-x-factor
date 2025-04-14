@@ -25,10 +25,11 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(response => response.json())
             // 3 Append response data to GUI
             .then(data => {
+                // 3.1 Play the audio from received path
                 const audio = new Audio(data.audio_url);
                 audio.play();
+                // 3.2 Append the message to GUI
                 appendMessage('Gemma 3', data.response);
-                //speakText(data.response);  // Speak the response
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -44,14 +45,4 @@ document.addEventListener('DOMContentLoaded', function () {
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    // ✅ Text-to-speech function
-    function speakText(text) {
-        if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'en-US'; // or any other language code
-            window.speechSynthesis.speak(utterance);
-        } else {
-            console.warn('TTS not supported in this browser.');
-        }
-    }
 });

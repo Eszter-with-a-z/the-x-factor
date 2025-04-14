@@ -5,6 +5,7 @@ import time
 import os
 # Global memory for storing chat histories per session ID
 from uuid import uuid4
+# For TTS
 import asyncio
 
 
@@ -75,8 +76,9 @@ def chat():
         If it's been around 5 minutes (or 3-5 messages), gracefully offer a choice:
         Either Continue talking,
         Or get help creating a social media caption and photo-taking instructions for Instagram and Facebook.
-        Your answer must be maximum as long as their previous answer.
+        Your answer must be maximum as long as their previous answer. 
         """
+        # Elaborate on what social media outcome you would like, modularity, tone (own voice)
      # Build messages list
     messages = [{"role": "system", "content": system_prompt}] + history
 
@@ -94,8 +96,11 @@ def chat():
     user_data['chat_history'] = history
 
     # Generate TTS using Edge
+    #   Create file
     audio_path = os.path.join("static", "audio", "response.mp3")
+    #   Generate speech
     asyncio.run(my_functions.generate_speech(ai_reply, audio_path))
+    # Return response and path to frontend
     return jsonify({"response": ai_reply,
                     "audio_url": "/static/audio/response.mp3"})
 
