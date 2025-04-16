@@ -1,14 +1,25 @@
+# Generate AI response
 # Connect to Gemma (no memory)
 import requests
 OLLAMA_API_URL = 'http://127.0.0.1:11434/api/chat'
 
-def call_ollama(messages):
+def call_ollama(system_prompt, history):
+    # Build messages list
+    messages = [{"role": "system", "content": system_prompt}] + history
+
+    # Send it to ollama
     response = requests.post(OLLAMA_API_URL, json={
         'model': 'gemma3:4b',
         'messages': messages,
         'stream': False
     })
-    return response
+
+    # Format response to user to JSON
+    reply = response.json()['message']['content'].strip()
+    return reply
+
+
+
 
 # Generate random question topic
 import random

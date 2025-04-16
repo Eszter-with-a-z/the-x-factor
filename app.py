@@ -55,24 +55,22 @@ def chat():
     # Update Exchange count
     user_data['exchange_count'] += 1
     
-    #  If we're in post-generation mode, generate social post then return
+    # Social media post-generation mode
+    # Check if it exists, otherwise return False
     if user_data.get('is_generating_post', False):
         user_data['is_generating_post'] = False  # reset after one response
         system_prompt = (
-            "You're helping a craft entrepreneur turn their recent conversation into a social media post.\n"
-            "Use the previous chat history to create:\n"
-            "1. A short, reflective caption for Instagram and Facebook (2–3 sentences).\n"
-            "2. A specific visual recommendation for the image based on what they are doing at the moment (e.g., the type of photo, what’s in it, mood).\n"
-            "Respond only with the caption and image idea, clearly separated.\n"
-            "Do not include any formatting or Markdown."
+            """You're helping a craft entrepreneur turn their recent conversation into a social media post.\n
+            Use the previous chat history to create:\n
+            1. A short, reflective caption for Instagram and Facebook (2–3 sentences) 
+            in THE USER'S VOICE.\n"
+            2. A specific visual recommendation for the image based on what they are doing at the moment (e.g., the type of photo, what’s in it, mood).\n
+            Respond only with the caption and image idea, clearly separated.\n
+            Do not include any formatting or Markdown.
+            """
         )
-        messages = [{"role": "system", "content": system_prompt}] + user_data['chat_history']
-        response = requests.post(OLLAMA_API_URL, json={
-            'model': 'gemma3:4b',
-            'messages': messages,
-            'stream': False
-        })
-        reply = response.json()['message']['content'].strip()
+       
+        reply = my_functions.call_ollama(system_prompt, user_data['chat_history'])
         user_data['chat_history'].append({"role": "assistant", "content": reply})
 
         asyncio.run(my_functions.generate_speech(reply))
@@ -81,37 +79,28 @@ def chat():
             "audio_url": "/static/audio/response.mp3?nocache=" + str(uuid4())
         })
 
-        # 🤔 If we just asked the user "chat or post", infer intent
+    # If we just asked the user "chat or post", infer intent
     elif user_data.get('is_choice_point', False):
-        intent_prompt = (
-            "You are tracking the conversation between a chatbot and a craft entrepreneur.\n"
-            "The entrepreneur was asked: 'Would you like to keep chatting, or turn this into a social media post idea?'\n"
-            "Based on their response, decide what they want to do.\n"
-            "Respond with only one word: 'chat' or 'post'."
-        )
+        intent_prompt = f"""
+        You are tracking the conversation between a chatbot and a craft entrepreneur.\n
+        The entrepreneur was asked: 'Would you like to keep chatting, or turn this into
+        a social media post idea or they are not there yet in the conversation because            they are talking about something else?'\n
+        "Based on their response, decide what they want to do.\n
+        "Respond with only one word: 'chat' or 'post' or 'not-yet'.
+        """
+        
         recent_history = user_data['chat_history'][-3:]
-        intent_messages = [{"role": "system", "content": intent_prompt}] + recent_history
-        intent_response = requests.post(OLLAMA_API_URL, json={
-            'model': 'gemma3:4b',
-            'messages': intent_messages,
-            'stream': False
-        })
-        intent = intent_response.json()['message']['content'].strip().lower()
+
+        intent = my_functions.call_ollama(intent_prompt, recent_history).lower()
+
         if "post" in intent:
             user_data['is_generating_post'] = True
             user_data['is_choice_point'] = False
             # Trigger post-gen immediately
             return chat()
-        elif "chat" in intent:
+        else:
             user_data['is_generating_post'] = False
             user_data['is_choice_point'] = False
-        else:
-            fallback_reply = "... would you like to keep chatting or turn this into a social media post idea?"
-            asyncio.run(my_functions.generate_speech(fallback_reply))
-            return jsonify({
-                "response": fallback_reply,
-                "audio_url": "/static/audio/response.mp3?nocache=" + str(uuid4())
-            })
 
 
     # Regular system prompt logic
@@ -122,7 +111,7 @@ def chat():
         Start with '...'
         You're talking to a craft entrepreneur.
         You are a curious chatbot, genuinely interested in understanding what drives them and their work.
-        Start by asking them what they’re working on right now.
+        Start by asking them what and where they’re working on right now.
         Keep your response short — no more than 2–3 natural-sounding sentences.
         Do not use Markdown, formatting symbols, or bullet points — reply in plain, conversational English.
         """
@@ -138,22 +127,19 @@ def chat():
         system_prompt = f"""
         Start with 'M...'
         Continue the conversation with thoughtful, human reflections.
-        If it's been around 3–5 messages, offer them a gentle choice:
-        Continue chatting, or get help crafting a social media caption and photo idea for Instagram and Facebook.
+        If it's been around 4–5 messages, offer them a gentle choice:
+        Continue chatting, or get help crafting a social media caption and photo idea for 
+        Instagram and Facebook.
         Responses should be 2–3 natural-sounding sentences, maximum.
         No Markdown or formatting — just speak clearly and conversationally 
         """
         # Elaborate on what social media outcome you would like, modularity, tone (own voice)
-        if 3 <= user_data['exchange_count'] <= 5:
+        if 4 <= user_data['exchange_count'] <= 5:
             user_data['is_choice_point'] = True
-     # Build messages list
-    messages = [{"role": "system", "content": system_prompt}] + user_data['chat_history']
+
 
     # Call Gemma
-    response = my_functions.call_ollama(messages)
-
-    # Why is it message and not messages?  -> Because it is the structure of the AI response, not your input
-    reply = response.json()["message"]["content"].strip()
+    reply = my_functions.call_ollama(system_prompt, user_data['chat_history'])
 
     # Add AI reply to history
     user_data['chat_history'].append({"role": "assistant", "content": reply})
