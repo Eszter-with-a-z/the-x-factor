@@ -1,3 +1,4 @@
+
 # Generate AI response
 # Connect to Gemma (no memory)
 import requests
@@ -33,9 +34,9 @@ def pick_random_topic():
 import edge_tts
 import os
 
-async def generate_speech(text):
+async def generate_speech(text, file_name = "response.mp3"):
     #   Create file
-    output_path = os.path.join("static", "audio", "response.mp3")
+    output_path = os.path.join("static", "audio", file_name)
     # Delete previous
     delete_previous_audio(output_path)
     # Send messsage and requested voice to Edge
@@ -60,3 +61,10 @@ async def list_voices():
         print(voice["ShortName"])
 
 # asyncio.run(list_voices())
+
+# Generate welcome message (TEMPORARY)
+import asyncio
+welcome_message = """
+Hi! Welcome!
+"""
+#asyncio.run(generate_speech(welcome_message, "welcome.mp3"))

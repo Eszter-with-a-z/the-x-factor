@@ -31,13 +31,30 @@ def index():
     session['user_id'] = str(uuid4())  # assign a new ID to this session
     user_data_store[session['user_id']] = { 
         'start_time': time.time(),
-        'chat_history': [],
+        'chat_history': [ {"role": "assistant", "content": f"{my_functions.welcome_message}"}],
         'exchange_count': 0,
         'topic': my_functions.pick_random_topic(),
         'is_generating_post': False,
         'is_choice_point': False
     }
     return render_template('index.html')
+
+# Send welcome message to frontend
+@app.route('/get_initial_message')
+def get_initial_message():
+    user_id = session.get('user_id')
+    if not user_id or user_id not in user_data_store:
+        return jsonify({"message": "", "audio_url": ""})
+    
+    chat_history = user_data_store[user_id].get('chat_history', [])
+    for message in chat_history:
+        if message["content"] == f"{my_functions.welcome_message}":
+            return jsonify({
+                "message": message["content"],
+                "audio_url": "/static/audio/welcome.mp3?nocache=" + str(uuid4())
+            })
+    return jsonify({"message": "", "audio_url": ""})
+
 
 
 @app.route('/chat', methods=['POST'])

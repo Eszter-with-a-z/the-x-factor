@@ -3,6 +3,19 @@ document.addEventListener('DOMContentLoaded', function () {
     const userInput = document.getElementById('user-input');
     const chatBox = document.getElementById('chat-box');
 
+    // Load welcome message + audio
+    fetch('/get_initial_message')
+        .then(result => result.json())
+        .then(data => {
+            if (data.message){
+                appendMessage("Gemma 3", data.message);
+                if (data.audio_url){
+                    const audio = new Audio(data.audio_url);
+                    audio.play();
+                }
+            }
+        })
+
     // Send message and get response
     chatForm.addEventListener('submit', function (event) {
         event.preventDefault();
