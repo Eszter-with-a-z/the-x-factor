@@ -2,7 +2,7 @@
 import requests
 OLLAMA_API_URL = 'http://127.0.0.1:11434/api/chat'
 
-def send_to_gemma(messages):
+def call_ollama(messages):
     response = requests.post(OLLAMA_API_URL, json={
         'model': 'gemma3:4b',
         'messages': messages,

@@ -22,8 +22,7 @@ app = Flask(__name__)
 # Get key for sessions
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-secret-for-local-only")
 user_data_store = {}
-# Connect to Gemma (no memory)
-OLLAMA_API_URL = 'http://127.0.0.1:11434/api/chat'
+
 
 # Render index.html
 @app.route('/')
@@ -151,11 +150,7 @@ def chat():
     messages = [{"role": "system", "content": system_prompt}] + user_data['chat_history']
 
     # Call Gemma
-    response = requests.post(OLLAMA_API_URL, json={
-        'model': 'gemma3:4b',
-        'messages': messages,
-        'stream': False
-})
+    response = my_functions.call_ollama(messages)
 
     # Why is it message and not messages?  -> Because it is the structure of the AI response, not your input
     reply = response.json()["message"]["content"].strip()
