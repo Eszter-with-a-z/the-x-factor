@@ -51,12 +51,10 @@ def chat():
     # Take user message
     user_message = request.json.get('message')
 
-    print(user_data_store)
-    # History
+    # Update History
     user_data['chat_history'].append({"role": "user", "content": user_message})
-    # Exchange count
+    # Update Exchange count
     user_data['exchange_count'] += 1
-    # Why does it not pick a topic each time /chat is requested?
     
     #  If we're in post-generation mode, generate social post then return
     if user_data.get('is_generating_post', False):
@@ -65,7 +63,7 @@ def chat():
             "You're helping a craft entrepreneur turn their recent conversation into a social media post.\n"
             "Use the previous chat history to create:\n"
             "1. A short, reflective caption for Instagram and Facebook (2–3 sentences).\n"
-            "2. A specific visual recommendation for the image (e.g., the type of photo, what’s in it, mood).\n"
+            "2. A specific visual recommendation for the image based on what they are doing at the moment (e.g., the type of photo, what’s in it, mood).\n"
             "Respond only with the caption and image idea, clearly separated.\n"
             "Do not include any formatting or Markdown."
         )
@@ -78,9 +76,7 @@ def chat():
         reply = response.json()['message']['content'].strip()
         user_data['chat_history'].append({"role": "assistant", "content": reply})
 
-
-        audio_path = os.path.join("static", "audio", "response.mp3")
-        asyncio.run(my_functions.generate_speech(reply, audio_path))
+        asyncio.run(my_functions.generate_speech(reply))
         return jsonify({
             "response": reply,
             "audio_url": "/static/audio/response.mp3?nocache=" + str(uuid4())
@@ -105,20 +101,18 @@ def chat():
         if "post" in intent:
             user_data['is_generating_post'] = True
             user_data['is_choice_point'] = False
-            # 🔁 Trigger post-gen immediately
+            # Trigger post-gen immediately
             return chat()
         elif "chat" in intent:
             user_data['is_generating_post'] = False
             user_data['is_choice_point'] = False
         else:
-            fallback_reply = "Hmm... would you like to keep chatting or turn this into a social media post idea?"
-            audio_path = os.path.join("static", "audio", "response.mp3")
-            asyncio.run(my_functions.generate_speech(fallback_reply, audio_path))
+            fallback_reply = "... would you like to keep chatting or turn this into a social media post idea?"
+            asyncio.run(my_functions.generate_speech(fallback_reply))
             return jsonify({
-                "reísponse": fallback_reply,
+                "response": fallback_reply,
                 "audio_url": "/static/audio/response.mp3?nocache=" + str(uuid4())
             })
-
 
 
     # Regular system prompt logic
@@ -126,7 +120,7 @@ def chat():
     # If it's the first message, prompt a reflective question
     if user_data['exchange_count'] == 1:
         system_prompt = f"""
-        Start with 'Hmm...'
+        Start with '...'
         You're talking to a craft entrepreneur.
         You are a curious chatbot, genuinely interested in understanding what drives them and their work.
         Start by asking them what they’re working on right now.
@@ -135,7 +129,7 @@ def chat():
         """
     elif user_data['exchange_count'] == 2:
         system_prompt = f"""
-        Start with saying 'Hmm...'
+        Start with saying 'M...'
         Keep the conversation going with thoughtprovoking, reflective questions.
         Base your reply on what they just said and gently connect it to the topic of {topic}.
         Keep it short: 2–3 full sentences at most.
@@ -143,7 +137,7 @@ def chat():
         """
     else:
         system_prompt = f"""
-        Start with 'Hmm...'
+        Start with 'M...'
         Continue the conversation with thoughtful, human reflections.
         If it's been around 3–5 messages, offer them a gentle choice:
         Continue chatting, or get help crafting a social media caption and photo idea for Instagram and Facebook.
@@ -162,18 +156,18 @@ def chat():
         'messages': messages,
         'stream': False
 })
+
     # Why is it message and not messages?  -> Because it is the structure of the AI response, not your input
     reply = response.json()["message"]["content"].strip()
 
     # Add AI reply to history
     user_data['chat_history'].append({"role": "assistant", "content": reply})
     user_data['chat_history'] = user_data['chat_history']
+        
+    print(user_data_store)
 
     # Generate TTS using Edge
-    #   Create file
-    audio_path = os.path.join("static", "audio", "response.mp3")
-    #   Generate speech
-    asyncio.run(my_functions.generate_speech(reply, audio_path))
+    asyncio.run(my_functions.generate_speech(reply))
     # Return response and path to frontend
     return jsonify({"response": reply,
                     "audio_url": "/static/audio/response.mp3?nocache=" + str(uuid4())
