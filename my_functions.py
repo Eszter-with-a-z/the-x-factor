@@ -65,6 +65,6 @@ async def list_voices():
 # Generate welcome message (TEMPORARY)
 import asyncio
 welcome_message = """
-Hi! I am Sao. I am an AI-based prototype who loves chatting with crafters! I hope to learn about your personal philosophy and to help you create social media content that resonates with your unique approach as a crafter and that captures the essence of your work. Are you ready for a discussion?
+Hi! I am Sao. I am an AI-based prototype who loves chatting with artists! I hope to learn about your personal philosophy and to help you create social media content that resonates with your unique approach as a artist and that captures the essence of your work. Are you ready for a discussion?
 """
-asyncio.run(generate_speech(welcome_message, "welcome.mp3"))
+#asyncio.run(generate_speech(welcome_message, "welcome.mp3"))

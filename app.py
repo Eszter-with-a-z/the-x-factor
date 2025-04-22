@@ -84,7 +84,7 @@ def chat():
     if user_data.get('is_generating_post', False):
         user_data['is_generating_post'] = False  # reset after one response
         system_prompt = (
-            """You're helping a craft entrepreneur turn their recent conversation into a social media post.
+            """You're helping an artist turn their recent conversation into a social media post.
             Use the previous chat history to create:
             1. A short, reflective caption using the user's word and tone for Instagram and Facebook (2–3 sentences)!
             2. A specific visual recommendation for the image based on what they are doing at the moment (e.g., the type of photo, what’s in it, mood).
@@ -106,8 +106,8 @@ def chat():
     # If we just asked the user "chat or post", infer intent
     elif user_data.get('is_choice_point', False):
         intent_prompt = f"""
-        You are tracking the conversation between a chatbot and a craft entrepreneur.
-        The entrepreneur was asked: 'Would you like to keep chatting, or turn this into
+        You are tracking the conversation between a chatbot and an artist.
+        The artist was asked: 'Would you like to keep chatting, or turn this into
         a social media post idea or they are not there yet in the conversation because 
         they are talking about something else?
         Based on their response, decide what they want to do.
@@ -135,9 +135,9 @@ def chat():
     if user_data['exchange_count'] == 1:
         system_prompt = f"""
         Start with '...'
-        You're talking to a craft entrepreneur.
+        You're talking to an artist.
         You are a curious chatbot, genuinely interested in understanding what drives them and their work.
-        Start by asking them what and where they’re working on right now.
+        Start by asking them what and where (what location) they’re working on right now.
         Keep your response short — no more than 2–3 natural-sounding sentences.
         Do not use Markdown, formatting symbols, or bullet points — reply in plain, conversational English.
         """
