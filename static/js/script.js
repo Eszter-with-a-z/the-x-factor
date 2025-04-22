@@ -3,6 +3,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const userInput = document.getElementById('user-input');
     const chatBox = document.getElementById('chat-box');
 
+    // Speech recognition variables
+    let recognition;
+    let isAISpeaking = false;
+
     // Load welcome message + audio
     fetch('/get_initial_message')
         .then(result => result.json())
@@ -10,46 +14,92 @@ document.addEventListener('DOMContentLoaded', function () {
             if (data.message){
                 appendMessage("Gemma 3", data.message);
                 if (data.audio_url){
+                    // Stop previous recognition
+                    if (recognition) {
+                        recognition.abort();
+                    }
+                
                     const audio = new Audio(data.audio_url);
+                    isAISpeaking = true;
                     audio.play();
+                    audio.onended = () =>{
+                        isAISpeaking = false;
+                        startSpeechRecognition();
+                    };
+                } else {
+                    startSpeechRecognition();
                 }
             }
-        })
+        });
 
-    // Send message and get response
-    chatForm.addEventListener('submit', function (event) {
-        event.preventDefault();
-        // 1 Get message
-        const message = userInput.value.trim();
-        if (message) {
-            // 1.1 Append message to GUI
-            appendMessage('You', message);
-            userInput.value = '';
-            // 2 Get response (FLASK))
-            fetch('/chat', {
-                method: 'POST',
-                // 2.1 Turn message into JSON
-                body: JSON.stringify({ message: message }),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            })
-            // 2.2 Turn the response into JSON
-            .then(response => response.json())
-            // 3 Append response data to GUI
-            .then(data => {
-                // 3.1 Play the audio from received path
-                const audio = new Audio(data.audio_url);
-                audio.play();
-                // 3.2 Append the message to GUI
-                appendMessage('Gemma 3', data.response);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
+    // Voice recognition with auto-restart
+    function startSpeechRecognition() {
+        if (isAISpeaking) return;
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert("Speech recognition not supported in this browser.");
+            return;
         }
-    });
 
+        recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+            console.log("Listening...");
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript.trim();
+            // Send message to AI
+            sendMessage(transcript);
+            console.log("You said:", transcript);
+            // Add message to GUI
+            appendMessage("You", transcript);
+        };
+
+        recognition.onerror = (event) => {
+            console.error("Speech recognition error:", event.error);
+        };
+
+        recognition.start();
+    }
+
+    // 2 Get response (FLASK))
+    function sendMessage(message) {
+        fetch('/chat', {
+            method: 'POST',
+            // 2.1 Turn message into JSON
+            body: JSON.stringify({ message: message }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        // 2.2 Turn the response into JSON
+        .then(response => response.json())
+        // 3 Append response data to frontend
+        .then(data => {
+            // 3.1 Append the message to GUI 
+            appendMessage('Gemma 3', data.response);
+            // 3.2 Play the audio from received path
+            if (recognition) {
+                recognition.abort(); // stop listening before TTS
+            }
+            const audio = new Audio(data.audio_url);
+            isAISpeaking = true;
+            audio.play();
+            audio.onended = () => {
+                isAISpeaking = false;
+                startSpeechRecognition();  // Restart after TTS
+            };
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+    
     function appendMessage(sender, message) {
         const messageElement = document.createElement('div');
         messageElement.textContent = `${sender}: ${message}`;
@@ -58,4 +108,17 @@ document.addEventListener('DOMContentLoaded', function () {
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
+    // Send typed message (optional fallback if user types)
+    chatForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        // 1 Get message
+        const message = userInput.value.trim();
+        if (message) {
+            // 1.1 Append message to GUI
+            appendMessage('You', message);
+            userInput.value = '';
+            sendMessage(message);
+        }
+    });
 });
+

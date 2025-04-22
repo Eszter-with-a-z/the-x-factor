@@ -71,18 +71,25 @@ def chat():
     user_data['chat_history'].append({"role": "user", "content": user_message})
     # Update Exchange count
     user_data['exchange_count'] += 1
-    
+    '''
+    Be more direct about THE question
+    Make it clear that it is not just a chit-chat, but the conversation
+    has a point
+    - make it less silverlining
+    - MAKE THE DECISION obvious
+    - add filler words a decision points
+    '''
     # Social media post-generation mode
     # Check if it exists, otherwise return False
     if user_data.get('is_generating_post', False):
         user_data['is_generating_post'] = False  # reset after one response
         system_prompt = (
-            """You're helping a craft entrepreneur turn their recent conversation into a social media post.\n
-            Use the previous chat history to create:\n
-            1. A short, reflective caption for Instagram and Facebook (2–3 sentences) 
-            in THE USER'S VOICE.\n"
-            2. A specific visual recommendation for the image based on what they are doing at the moment (e.g., the type of photo, what’s in it, mood).\n
-            Respond only with the caption and image idea, clearly separated.\n
+            """You're helping a craft entrepreneur turn their recent conversation into a social media post.
+            Use the previous chat history to create:
+            1. A short, reflective caption using the user's word and tone for Instagram and Facebook (2–3 sentences)!
+            2. A specific visual recommendation for the image based on what they are doing at the moment (e.g., the type of photo, what’s in it, mood).
+            Respond only with the caption and image idea, clearly separated.
+            3. Ask if they are satisfied with the result and if it feels authenitic to them as crafters. 
             Do not include any formatting or Markdown.
             """
         )
@@ -99,11 +106,12 @@ def chat():
     # If we just asked the user "chat or post", infer intent
     elif user_data.get('is_choice_point', False):
         intent_prompt = f"""
-        You are tracking the conversation between a chatbot and a craft entrepreneur.\n
+        You are tracking the conversation between a chatbot and a craft entrepreneur.
         The entrepreneur was asked: 'Would you like to keep chatting, or turn this into
-        a social media post idea or they are not there yet in the conversation because            they are talking about something else?'\n
-        "Based on their response, decide what they want to do.\n
-        "Respond with only one word: 'chat' or 'post' or 'not-yet'.
+        a social media post idea or they are not there yet in the conversation because 
+        they are talking about something else?
+        Based on their response, decide what they want to do.
+        Respond with only one word: 'chat' or 'post' or 'not-yet'.
         """
         
         recent_history = user_data['chat_history'][-3:]
@@ -123,6 +131,7 @@ def chat():
     # Regular system prompt logic
     topic = user_data.get('topic', my_functions.pick_random_topic())
     # If it's the first message, prompt a reflective question
+    # When you ask for feedback about the message, ask: please make sure that the voice feels authentic to you
     if user_data['exchange_count'] == 1:
         system_prompt = f"""
         Start with '...'
@@ -134,17 +143,25 @@ def chat():
         """
     elif user_data['exchange_count'] == 2:
         system_prompt = f"""
-        Start with saying 'M...'
-        Keep the conversation going with thoughtprovoking, reflective questions.
-        Base your reply on what they just said and gently connect it to the topic of {topic}.
+        Start with saying '...'
+        Chose a question within the topic of {topic} and connect it to what they just said.
         Keep it short: 2–3 full sentences at most.
         Do not use Markdown formatting — speak in plain, natural language.
         """
+    elif user_data['exchange_count'] == 3:
+        system_prompt = f"""
+        Start with '...'
+        Continue the conversation with thoughtful, human reflections connecting
+        to the {topic}.
+        Responses should be 2–3 natural-sounding sentences, maximum.
+        No Markdown or formatting — just speak clearly and conversationally 
+        """
     else:
         system_prompt = f"""
-        Start with 'M...'
-        Continue the conversation with thoughtful, human reflections.
-        If it's been around 4–5 messages, offer them a gentle choice:
+        Start with '...'
+        Continue the conversation with thoughtful, human reflections connecting
+        to the {topic}.
+        If it's been around 4–5 messages, offer them a choice:
         Continue chatting, or get help crafting a social media caption and photo idea for 
         Instagram and Facebook.
         Responses should be 2–3 natural-sounding sentences, maximum.
