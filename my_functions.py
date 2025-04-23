@@ -24,7 +24,11 @@ def call_ollama(system_prompt, history):
 
 # Generate random question topic
 import random
-topics = ["ethics","sustainability", "human-scale", "being personal", "uniqueness", "longevity of the products"]
+# For crafters
+topics = ["ethics","sustainability", "human-scale production", "personal for the user", "unique product", "longevity of the products"]
+# For artists
+# TODO: ask
+#topics = ["ethical business", "human-scale", "being personal", "uniqueness", "lifelong hobby"]
 def pick_random_topic():
     return random.choice(topics)
 
