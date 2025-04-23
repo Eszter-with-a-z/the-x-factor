@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Speech recognition variables
     let recognition;
+    let recognitionTimeout;
     let isAISpeaking = false;
 
     // Load welcome message + audio
@@ -12,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(result => result.json())
         .then(data => {
             if (data.message){
-                appendMessage("Gemma 3", data.message);
+                appendMessage("Sao", data.message);
                 if (data.audio_url){
                     // Stop previous recognition
                     if (recognition) {
@@ -49,9 +50,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
         recognition.onstart = () => {
             console.log("Listening...");
+            // Set a manual timeout to stop listening after 5 seconds
+            recognitionTimeout = setTimeout(() => {
+                recognition.stop();
+            }, 6000);
         };
 
         recognition.onresult = (event) => {
+            // Stop timeout if speech is detected
+            clearTimeout(recognitionTimeout);
             const transcript = event.results[0][0].transcript.trim();
             // Send message to AI
             sendMessage(transcript);
@@ -82,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // 3 Append response data to frontend
         .then(data => {
             // 3.1 Append the message to GUI 
-            appendMessage('Gemma 3', data.response);
+            appendMessage('Sao', data.response);
             // 3.2 Play the audio from received path
             if (recognition) {
                 recognition.abort(); // stop listening before TTS
