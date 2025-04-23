@@ -86,10 +86,10 @@ def chat():
         system_prompt = (
             """You're helping an artist turn their recent conversation into a social media post.
             Use the previous chat history to create:
-            1. A short, reflective caption using the user's word and tone for Instagram and Facebook (2–3 sentences)!
-            2. A specific visual recommendation for the image based on what they are doing at the moment (e.g., the type of photo, what’s in it, mood).
-            Respond only with the caption and image idea, clearly separated.
-            3. Ask if they are satisfied with the result and if it feels authenitic to them as crafters. 
+            1. A short, reflective caption using the user's word and tone for Instagram and Facebook (2–3 sentences) with search-engine optimized hashtages!
+            2. A specific visual recommendation for either an image or a video based on what they are doing at the moment (e.g., the type of photo or video, what’s in it, mood).
+            3. Respond only with the caption idea and the visual recommendation, clearly seperated.
+            4. Ask if they are satisfied with the result and if it feels authenitic to them as crafters. 
             Do not include any formatting or Markdown.
             """
         )
@@ -142,7 +142,8 @@ def chat():
     elif user_data['exchange_count'] == 2:
         system_prompt = f"""
         Start with saying '...'
-        Ask a question within the topic of {topic} and connect it to what they just said.
+        Introduce today's topic in one sentence: {topic}. 
+        Ask a question about {topic} and connect it to what they just said.
         Keep it short: 2–3 full sentences at most.
         Do not use Markdown formatting — speak in plain, natural language.
         """
@@ -167,7 +168,7 @@ def chat():
         No Markdown or formatting — just speak clearly and conversationally 
         """
         # Elaborate on what social media outcome you would like, modularity, tone (own voice)
-        if 4 <= user_data['exchange_count'] <= 5:
+        if user_data['exchange_count']%4 == 0 or user_data['exchange_count']%5 == 0:
             user_data['is_choice_point'] = True
 
 

@@ -56,15 +56,22 @@ document.addEventListener('DOMContentLoaded', function () {
             }, 6000);
         };
 
-        recognition.onresult = (event) => {
+        recognition.onspeechstart = () => {
             // Stop timeout if speech is detected
             clearTimeout(recognitionTimeout);
+        };
+
+        recognition.onresult = (event) => {
             const transcript = event.results[0][0].transcript.trim();
             // Send message to AI
             sendMessage(transcript);
-            console.log("You said:", transcript);
             // Add message to GUI
             appendMessage("You", transcript);
+        };
+
+        recognition.onend = () => {
+            // Recognition ended (either naturally or manually)
+            clearTimeout(recognitionTimeout);
         };
 
         recognition.onerror = (event) => {
