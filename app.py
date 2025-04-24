@@ -81,12 +81,12 @@ def chat():
     '''
     # Social media post-generation mode
     # Check if it exists, otherwise return False
-    if user_data.get('is_generating_post', False):
+    if user_data.get('is_generating_post', False) and user_message != "__continue_post__":
         user_data['is_generating_post'] = False  # reset after one response
         system_prompt = (
             """You're helping an artist turn their recent conversation into a social media post.
             Use the previous chat history to create:
-            1. A short, reflective caption using the user's word and tone for Instagram and Facebook (2–3 sentences) with search-engine optimized hashtages!
+            1. A short, reflective caption using the USER'S WORDS AND TONE for Instagram and Facebook (2–3 sentences) with search-engine optimized hashtages!
             2. A specific visual recommendation for either an image or a video based on what they are doing at the moment (e.g., the type of photo or video, what’s in it, mood).
             3. Respond only with the caption idea and the visual recommendation, clearly seperated.
             4. Ask if they are satisfied with the result and if it feels authenitic to them as crafters. 
@@ -94,14 +94,7 @@ def chat():
             """
         )
        
-        reply = my_functions.call_ollama(system_prompt, user_data['chat_history'])
-        user_data['chat_history'].append({"role": "assistant", "content": reply})
-
-        asyncio.run(my_functions.generate_speech(reply))
-        return jsonify({
-            "response": reply,
-            "audio_url": "/static/audio/response.mp3?nocache=" + str(uuid4())
-        })
+        return jsonify(my_functions.generate_reply(user_data, system_prompt))
 
     # If we just asked the user "chat or post", infer intent
     elif user_data.get('is_choice_point', False):
@@ -119,8 +112,11 @@ def chat():
         if "post" in intent:
             user_data['is_generating_post'] = True
             user_data['is_choice_point'] = False
-            # Trigger post-gen immediately
-            return chat()
+            # Short response, then tell frontend to trigger the next step
+            return jsonify({
+                **my_functions.generate_reply(user_data, "Okay, let me turn this into a post idea for you.", append=False),
+                "auto_continue": True
+            })
         else:
             user_data['is_generating_post'] = False
             user_data['is_choice_point'] = False
@@ -158,7 +154,7 @@ def chat():
     else:
         system_prompt = f"""
         Start with '...'
-        Continue the conversation with thoughtful reflections connecting
+        React to what have been said with thoughtful reflections connecting
         to the {topic}.
         If it's been 4–5 message, OFFER THEM A CHOICE:
         EITHER continue chatting, 

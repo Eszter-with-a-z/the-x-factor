@@ -2,11 +2,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const chatForm = document.getElementById('chat-form');
     const userInput = document.getElementById('user-input');
     const chatBox = document.getElementById('chat-box');
-
+    const startButton = document.getElementById('stop-voice');
+    const stopButton = document.getElementById('start-voice')
     // Speech recognition variables
     let recognition;
-    let recognitionTimeout;
     let isAISpeaking = false;
+    let manualStop = false;
+    let isListening = false;
 
     // Load welcome message + audio
     fetch('/get_initial_message')
@@ -33,53 +35,60 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-    // Voice recognition with auto-restart
-    function startSpeechRecognition() {
-        if (isAISpeaking) return;
-
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            alert("Speech recognition not supported in this browser.");
-            return;
+        function startSpeechRecognition() {
+            if (isAISpeaking|| isListening || manualStop) return;
+        
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Speech recognition not supported in this browser.");
+                return;
+            }
+        
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false; // you can set this to true if you want live text
+            recognition.maxAlternatives = 1;
+        
+            let transcript = '';
+            isListening = true;
+            
+            // Add detected speech to transcript
+            recognition.onresult = (event) => {
+                transcript += ' ' + event.results[0][0].transcript.trim();
+            };
+            
+            // When speech detectionends
+            recognition.onend = () => {
+                isListening = false;
+                // Return if manual stop OR AI still speaking
+                // because of manual stop, stop voice recognition, just return
+                if (manualStop || isAISpeaking) {
+                    return; 
+                }
+                // Append detected speech and send
+                if (transcript.trim()) {
+                    sendMessage(transcript.trim());
+                    appendMessage("You", transcript.trim());
+                    // Clear transcript
+                    transcript = '';
+                }
+                // If not manual stop, resume recognition 
+                // NOTE: WebAPI would stop it unless restarted
+                startSpeechRecognition(); // auto-restart if not manually stopped
+            };
+        
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error:", event.error);
+                isListening = false;
+                if (!manualStop && !isAISpeaking) {
+                    // try again unless user stopped it
+                    startSpeechRecognition(); 
+                }
+            };
+        
+            recognition.start();
         }
-
-        recognition = new SpeechRecognition();
-        recognition.lang = 'en-US';
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
-
-        recognition.onstart = () => {
-            console.log("Listening...");
-            // Set a manual timeout to stop listening after 5 seconds
-            recognitionTimeout = setTimeout(() => {
-                recognition.stop();
-            }, 6000);
-        };
-
-        recognition.onspeechstart = () => {
-            // Stop timeout if speech is detected
-            clearTimeout(recognitionTimeout);
-        };
-
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript.trim();
-            // Send message to AI
-            sendMessage(transcript);
-            // Add message to GUI
-            appendMessage("You", transcript);
-        };
-
-        recognition.onend = () => {
-            // Recognition ended (either naturally or manually)
-            clearTimeout(recognitionTimeout);
-        };
-
-        recognition.onerror = (event) => {
-            console.error("Speech recognition error:", event.error);
-        };
-
-        recognition.start();
-    }
+        
 
     // 2 Get response (FLASK))
     function sendMessage(message) {
@@ -96,18 +105,27 @@ document.addEventListener('DOMContentLoaded', function () {
         // 3 Append response data to frontend
         .then(data => {
             // 3.1 Append the message to GUI 
-            appendMessage('Sao', data.response);
+            if (message !== "__continue_post__") {
+                appendMessage('Sao', data.response);
+            }
             // 3.2 Play the audio from received path
             if (recognition) {
                 recognition.abort(); // stop listening before TTS
             }
-            const audio = new Audio(data.audio_url);
             isAISpeaking = true;
+            const audio = new Audio(data.audio_url);
             audio.play();
             audio.onended = () => {
                 isAISpeaking = false;
-                startSpeechRecognition();  // Restart after TTS
-            };
+                // Handle auto-continue
+                if (data.auto_continue) {
+                    setTimeout(() => {
+                        sendMessage("__continue_post__");
+                    }, 800); // small pause so it feels natural
+                } else {
+                    startSpeechRecognition(); // normal case
+                }
+                };
         })
         .catch(error => {
             console.error('Error:', error);
@@ -134,5 +152,25 @@ document.addEventListener('DOMContentLoaded', function () {
             sendMessage(message);
         }
     });
+
+    stopButton.addEventListener('click', () => {
+        manualStop = true;
+        if (recognition && isListening) {
+            recognition.abort();
+            isListening = false;
+            console.log("Manual stop triggered.");
+        }
+    });
+
+    startButton.addEventListener('click', () => {
+        if (!isListening) {
+            manualStop = false;
+            startSpeechRecognition();
+            console.log("Manual start triggered.");
+        }
+    });
 });
+
+
+
 
