@@ -10,7 +10,11 @@ from uuid import uuid4
 import asyncio
 
 '''
-Steps to initialize The Human Touch prototype (even though file name is X factor)
+Steps to initialize The Human Touch prototype 
+-4. in Powershell: py -3 -m venv .venv
+-3. In bash: . .venv/Scripts/activate
+-2. In bash: pip install Flask
+-1. In bash: pip install -r requirements.txt
 1. Open VS Code. From bash, run:
 ollama run gemma3:4b
 2. Start Flask: click on run in app.py
@@ -33,7 +37,7 @@ def index():
         'start_time': time.time(),
         'chat_history': [ {"role": "assistant", "content": f"{my_functions.welcome_message}"}],
         'exchange_count': 0,
-        'topic': my_functions.pick_random_topic(),
+        'type_of_assistance':"",
         'is_generating_post': False,
         'is_choice_point': False
     }
@@ -70,23 +74,17 @@ def chat():
     # Update History
     user_data['chat_history'].append({"role": "user", "content": user_message})
     # Update Exchange count
+    # !!! Change where you add it as the code relies on this
     user_data['exchange_count'] += 1
-    '''
-    Be more direct about THE question
-    Make it clear that it is not just a chit-chat, but the conversation
-    has a point
-    - make it less silverlining
-    - MAKE THE DECISION obvious
-    - add filler words a decision points
-    '''
+    
     # Social media post-generation mode
     # Check if it exists, otherwise return False
     if user_data.get('is_generating_post', False) and user_message != "__continue_post__":
         user_data['is_generating_post'] = False  # reset after one response
         system_prompt = (
-            """You're helping an artist turn their recent conversation into a social media post.
+            """You're helping an artist turn their recent conversation into an IG post.
             Use the previous chat history to create:
-            1. A short, reflective caption using the USER'S WORDS AND TONE for Instagram and Facebook (2–3 sentences) with search-engine optimized hashtages!
+            1. search-engine optimized hashtages!
             2. A specific visual recommendation for either an image or a video based on what they are doing at the moment (e.g., the type of photo or video, what’s in it, mood).
             3. Respond only with the caption idea and the visual recommendation, clearly seperated.
             4. Ask if they are satisfied with the result and if it feels authenitic to them as crafters. 
@@ -96,58 +94,55 @@ def chat():
        
         return jsonify(my_functions.generate_reply(user_data, system_prompt))
 
-    # If we just asked the user "chat or post", infer intent
-    elif user_data.get('is_choice_point', False):
-        intent_prompt = f"""
-        You are tracking the conversation between a chatbot and an artist.
-        The artist was asked: 'Would you like to keep chatting, or turn this into a social media post idea?
-        Based on their response, decide what they want to do.
-        Respond with only one word: 'chat' or 'post'.
-        """
-        
-        recent_history = user_data['chat_history'][-3:]
-
-        intent = my_functions.call_ollama(intent_prompt, recent_history).lower()
-
-        if "post" in intent:
-            user_data['is_generating_post'] = True
-            user_data['is_choice_point'] = False
-            # Short response, then tell frontend to trigger the next step
-            return jsonify({
-                **my_functions.generate_reply(user_data, "Okay, let me turn this into a post idea for you.", append=False),
-                "auto_continue": True
-            })
-        else:
-            user_data['is_generating_post'] = False
-            user_data['is_choice_point'] = False
+    
 
 
     # Regular system prompt logic
     topic = user_data.get('topic', my_functions.pick_random_topic())
-    # If it's the first message, prompt a reflective question
-    # When you ask for feedback about the message, ask: please make sure that the voice feels authentic to you
+    # 1: React + social media + odea or brainstorming?
+    # HOW TO STOP IT FROM HYPING?
     if user_data['exchange_count'] == 1:
         system_prompt = f"""
         Start with '...'
-        You're talking to an artist.
-        You are a curious chatbot interested in understanding what drives them and their work.
-        Start by asking them what and where (what location) they’re working on right now.
+        You're talking to a painter.
+        You are an analytical chatbot who crafts personalized Instagram posts.
+        Respond to what they said, then say something like "I was thinking of crafting a social media post for you"
+        or "I was thinking that it might be time to post on Instagram."
+        Then ask them if they already have an idea in mind for the post or do they wanted to brainstorm about it.
+        Be cool, NEUTRAL, not friendly!
         Keep your response short — no more than 2–3 natural-sounding sentences.
         Do not use Markdown, formatting symbols, or bullet points — reply in plain, conversational English.
         """
+        #user_data['is_choice_point'] = True
+        
     elif user_data['exchange_count'] == 2:
+        decision = my_functions.decide_intent("Do you already have an idea in mind for the social media or would you like to brainstorm about it", user_data['chat_history'][-1], "brainstorm", "idea")
+        print(decision)
+        user_data['type_of_assistance'] = decision
+        if user_data['type_of_assistance'] == "brainstorm":
+            '''
+            
+            
+            
+            '''
+            print("Let's brainstorm")
+        elif user_data['type_of_assistance'] == "idea":
+            print("Let's ideate")
+            '''
+            
+            
+            
+            '''
         system_prompt = f"""
         Start with saying '...'
-        Introduce today's topic in one sentence: {topic}. 
-        Ask a question about {topic} and connect it to what they just said.
+        xxx
         Keep it short: 2–3 full sentences at most.
         Do not use Markdown formatting — speak in plain, natural language.
         """
     elif user_data['exchange_count'] == 3:
         system_prompt = f"""
         Start with '...'
-        Continue the conversation with thoughtful reflections connecting
-        to the {topic}.
+        xxx
         Responses should be 2–3 natural-sounding sentences, maximum.
         No Markdown or formatting — just speak clearly and conversationally 
         """

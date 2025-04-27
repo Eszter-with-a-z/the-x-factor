@@ -69,9 +69,9 @@ async def list_voices():
 # Generate welcome message (TEMPORARY)
 import asyncio
 welcome_message = """
-Hi! I am Sao. I am an AI-based prototype who loves chatting with artists! I hope to learn about your personal philosophy and to help you create social media content that captures the essence of your work. Are you ready for a discussion?
+Hi there! Welcome back! What are you working on this afternoon?
 """
-#asyncio.run(generate_speech(welcome_message, "welcome.mp3"))
+asyncio.run(generate_speech(welcome_message, "welcome.mp3"))
 
 # Generate reply
 from uuid import uuid4
@@ -86,3 +86,47 @@ def generate_reply(user_data, prompt, append=True):
         "response": reply,
         "audio_url": "/static/audio/response.mp3?nocache=" + str(uuid4())
     }
+
+# Decide intent
+from flask import Flask, request, render_template, jsonify, session
+def decide_intent(question, response, optionA, optionB):
+        #print(response, optionA, optionB)
+        print(response)
+        response = response['content'].lower()
+        if optionA.lower() in response:
+            #print(optionA)
+            return optionA
+        if optionB.lower() in response:
+            #print(optionB)
+            return optionB
+
+        intent_prompt = f"""
+        You are tracking the conversation between a chatbot and an artist.
+        The artist was asked: '{question}'
+        Based on their response, decide what they want to do.
+        Respond with ONLY ONE WORD: '{optionA}' or '{optionB}'.
+        """
+        history = [{"role": "user", "content": response}]
+        intent = call_ollama(intent_prompt, history).lower()
+        if intent == "error":
+            print("Warning: Ollama failed to classify intent.")
+            return None
+        
+        intent = intent.strip().lower()
+        if intent == optionA or intent == optionB:
+            return intent
+        else:
+            print(f"Unclear intent returned: {intent}")
+            return None
+        #if f"{optionA}" in intent:
+        """
+        user_data['is_generating_post'] = True
+        user_data['is_choice_point'] = False
+        # Short response, then tell frontend to trigger the next step
+        return jsonify({
+            **generate_reply(user_data, "Okay, let me turn this into a post idea for you.", append=False),
+            "auto_continue": True
+        })"""
+       # elif f"{optionB}" in intent:
+        """user_data['is_generating_post'] = False
+        user_data['is_choice_point'] = False"""
