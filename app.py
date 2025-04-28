@@ -36,10 +36,7 @@ def index():
     user_data_store[session['user_id']] = { 
         'start_time': time.time(),
         'chat_history': [ {"role": "assistant", "content": f"{my_functions.welcome_message}"}],
-        'exchange_count': 0,
-        'type_of_assistance':"",
-        'is_generating_post': False,
-        'is_choice_point': False
+        'exchange_count': 0
     }
     return render_template('index.html')
 
@@ -76,99 +73,65 @@ def chat():
     # Update Exchange count
     # !!! Change where you add it as the code relies on this
     user_data['exchange_count'] += 1
-    
-    # Social media post-generation mode
-    # Check if it exists, otherwise return False
-    if user_data.get('is_generating_post', False) and user_message != "__continue_post__":
-        user_data['is_generating_post'] = False  # reset after one response
-        system_prompt = (
-            """You're helping an artist turn their recent conversation into an IG post.
-            Use the previous chat history to create:
-            1. search-engine optimized hashtages!
-            2. A specific visual recommendation for either an image or a video based on what they are doing at the moment (e.g., the type of photo or video, what’s in it, mood).
-            3. Respond only with the caption idea and the visual recommendation, clearly seperated.
-            4. Ask if they are satisfied with the result and if it feels authenitic to them as crafters. 
-            Do not include any formatting or Markdown.
-            """
-        )
-       
-        return jsonify(my_functions.generate_reply(user_data, system_prompt))
 
-    
-
-
-    # Regular system prompt logic
-    topic = user_data.get('topic', my_functions.pick_random_topic())
     # 1: React + social media + odea or brainstorming?
     # HOW TO STOP IT FROM HYPING?
     if user_data['exchange_count'] == 1:
         system_prompt = f"""
         Start with '...'
         You're talking to a painter.
-        You are an analytical chatbot who crafts personalized Instagram posts.
-        Respond to what they said, then say something like "I was thinking of crafting a social media post for you"
-        or "I was thinking that it might be time to post on Instagram."
-        Then ask them if they already have an idea in mind for the post or do they wanted to brainstorm about it.
-        Be cool, NEUTRAL, not friendly!
+        You are an analytical chatbot.
+        Respond to what they said, then ask them where they are working (location).
+        Be cool, NEUTRAL!
         Keep your response short — no more than 2–3 natural-sounding sentences.
         Do not use Markdown, formatting symbols, or bullet points — reply in plain, conversational English.
         """
-        #user_data['is_choice_point'] = True
         
     elif user_data['exchange_count'] == 2:
-        decision = my_functions.decide_intent("Do you already have an idea in mind for the social media or would you like to brainstorm about it", user_data['chat_history'][-1], "brainstorm", "idea")
-        print(decision)
-        user_data['type_of_assistance'] = decision
-        if user_data['type_of_assistance'] == "brainstorm":
-            '''
-            
-            
-            
-            '''
-            print("Let's brainstorm")
-        elif user_data['type_of_assistance'] == "idea":
-            print("Let's ideate")
-            '''
-            
-            
-            
-            '''
+        system_prompt = f"""
+        Start with '...'
+        You're talking to a painter.
+        You are an analytical chatbot who crafts personalized Instagram posts.
+        Respond to what they said.
+        Then say "I was thinking that it might be time to post on Instagram."
+        Then ask them if "you maybe already have an idea in mind for a post or do you want to brainstorm about it?"
+        Be cool, NEUTRAL!
+        Keep your response short — no more than 2–3 natural-sounding sentences.
+        Do not use Markdown, formatting symbols, or bullet points — reply in plain, conversational English.
+        """
+        
+    elif user_data['exchange_count'] >= 3 and user_data['exchange_count'] <= 5:
         system_prompt = f"""
         Start with saying '...'
-        xxx
+        You're talking to a painter.
+        You are an analytical chatbot.
+        Based on the prompts so far, if the user wants to brainstorm,
+        creatively ask the user about what makes their current project special.
+        If the user already has an idea, ask the user about the idea and how they
+        imagine it.
+        Be cool, NEUTRAL!
         Keep it short: 2–3 full sentences at most.
         Do not use Markdown formatting — speak in plain, natural language.
         """
-    elif user_data['exchange_count'] == 3:
-        system_prompt = f"""
-        Start with '...'
-        xxx
-        Responses should be 2–3 natural-sounding sentences, maximum.
-        No Markdown or formatting — just speak clearly and conversationally 
-        """
+
     else:
         system_prompt = f"""
         Start with '...'
-        React to what have been said with thoughtful reflections connecting
-        to the {topic}.
-        If it's been 4–5 message, OFFER THEM A CHOICE:
-        EITHER continue chatting, 
-        OR get help crafting a social media caption and photo idea for 
-        Instagram and Facebook.
-        Responses should be 2–3 natural-sounding sentences, maximum.
-        No Markdown or formatting — just speak clearly and conversationally 
+        Be cool, NEUTRAL!
+        You're helping an artist turn their recent conversation into an Instagram post.
+            Use the previous chat history to create:
+            1. A specific visual recommendation for either an image or a video based on what they are doing at the moment and where (e.g., the type of photo or video, what’s in it, mood).
+            The answer format should be:
+            2. search-engine optimized hashtages
+            3. Ask if they are satisfied with the result and if it feels authenitic to them as crafters. 
+            Do not include any formatting or Markdown.
         """
-        # Elaborate on what social media outcome you would like, modularity, tone (own voice)
-        if user_data['exchange_count']%4 == 0 or user_data['exchange_count']%5 == 0:
-            user_data['is_choice_point'] = True
-
-
+    print("generating answer...")
     # Call Gemma
     reply = my_functions.call_ollama(system_prompt, user_data['chat_history'])
 
     # Add AI reply to history
     user_data['chat_history'].append({"role": "assistant", "content": reply})
-    user_data['chat_history'] = user_data['chat_history']
         
     print(user_data_store)
 

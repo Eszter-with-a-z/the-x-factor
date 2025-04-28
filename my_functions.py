@@ -39,12 +39,14 @@ import edge_tts
 import os
 
 async def generate_speech(text, file_name = "response.mp3"):
+    # Remove all '#' characters
+    cleaned_text = text.replace("#", " ")
     #   Create file
     output_path = os.path.join("static", "audio", file_name)
     # Delete previous
     delete_previous_audio(output_path)
     # Send messsage and requested voice to Edge
-    communicate = edge_tts.Communicate(text, voice="en-US-AvaNeural")
+    communicate = edge_tts.Communicate(cleaned_text, voice="en-US-AvaNeural")
     # Save the file
     await communicate.save(output_path)
 
@@ -87,46 +89,3 @@ def generate_reply(user_data, prompt, append=True):
         "audio_url": "/static/audio/response.mp3?nocache=" + str(uuid4())
     }
 
-# Decide intent
-from flask import Flask, request, render_template, jsonify, session
-def decide_intent(question, response, optionA, optionB):
-        #print(response, optionA, optionB)
-        print(response)
-        response = response['content'].lower()
-        if optionA.lower() in response:
-            #print(optionA)
-            return optionA
-        if optionB.lower() in response:
-            #print(optionB)
-            return optionB
-
-        intent_prompt = f"""
-        You are tracking the conversation between a chatbot and an artist.
-        The artist was asked: '{question}'
-        Based on their response, decide what they want to do.
-        Respond with ONLY ONE WORD: '{optionA}' or '{optionB}'.
-        """
-        history = [{"role": "user", "content": response}]
-        intent = call_ollama(intent_prompt, history).lower()
-        if intent == "error":
-            print("Warning: Ollama failed to classify intent.")
-            return None
-        
-        intent = intent.strip().lower()
-        if intent == optionA or intent == optionB:
-            return intent
-        else:
-            print(f"Unclear intent returned: {intent}")
-            return None
-        #if f"{optionA}" in intent:
-        """
-        user_data['is_generating_post'] = True
-        user_data['is_choice_point'] = False
-        # Short response, then tell frontend to trigger the next step
-        return jsonify({
-            **generate_reply(user_data, "Okay, let me turn this into a post idea for you.", append=False),
-            "auto_continue": True
-        })"""
-       # elif f"{optionB}" in intent:
-        """user_data['is_generating_post'] = False
-        user_data['is_choice_point'] = False"""
