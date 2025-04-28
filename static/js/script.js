@@ -2,13 +2,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const chatForm = document.getElementById('chat-form');
     const userInput = document.getElementById('user-input');
     const chatBox = document.getElementById('chat-box');
-    const startButton = document.getElementById('stop-voice');
-    const stopButton = document.getElementById('start-voice')
+    const statusElement = document.getElementById('recognition-status');
+
     // Speech recognition variables
     let recognition;
-    let isAISpeaking = false;
-    let manualStop = false;
-    let isListening = false;
+    let isAIGeneratingResponse = false;
+    let isRecognitionActive = false;
+    let manuallyStopped = false;
+    let transcript = '';
+    let transcriptBuffer = '';
 
     // Load welcome message + audio
     fetch('/get_initial_message')
@@ -23,10 +25,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 
                     const audio = new Audio(data.audio_url);
-                    isAISpeaking = true;
+                    isAIGeneratingResponse = true;
                     audio.play();
                     audio.onended = () =>{
-                        isAISpeaking = false;
+                        isAIGeneratingResponse = false;
+                        manuallyStopped = false;  // Ensure reset
                         startSpeechRecognition();
                     };
                 } else {
@@ -35,62 +38,57 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        function startSpeechRecognition() {
-            if (isAISpeaking|| isListening || manualStop) return;
-        
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                alert("Speech recognition not supported in this browser.");
-                return;
-            }
-        
-            recognition = new SpeechRecognition();
-            recognition.lang = 'en-US';
-            recognition.interimResults = false; // you can set this to true if you want live text
-            recognition.maxAlternatives = 1;
-        
-            let transcript = '';
-            isListening = true;
-            
-            // Add detected speech to transcript
-            recognition.onresult = (event) => {
-                transcript += ' ' + event.results[0][0].transcript.trim();
-            };
-            
-            // When speech detectionends
-            recognition.onend = () => {
-                isListening = false;
-                // Return if manual stop OR AI still speaking
-                // because of manual stop, stop voice recognition, just return
-                if (manualStop || isAISpeaking) {
-                    return; 
-                }
-                // Append detected speech and send
-                if (transcript.trim()) {
-                    sendMessage(transcript.trim());
-                    appendMessage("You", transcript.trim());
-                    // Clear transcript
-                    transcript = '';
-                }
-                // If not manual stop, resume recognition 
-                // NOTE: WebAPI would stop it unless restarted
-                startSpeechRecognition(); // auto-restart if not manually stopped
-            };
-        
-            recognition.onerror = (event) => {
-                console.error("Speech recognition error:", event.error);
-                isListening = false;
-                if (!manualStop && !isAISpeaking) {
-                    // try again unless user stopped it
-                    startSpeechRecognition(); 
-                }
-            };
-        
-            recognition.start();
-        }
-        
+    // Voice recognition with auto-restart
+    function startSpeechRecognition() {
+        if (isAIGeneratingResponse || isRecognitionActive) return;
 
-    // 2 Get response (FLASK))
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert("Speech recognition not supported in this browser.");
+            return;
+        }
+
+        recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+
+        // When voice recognition starts
+        recognition.onstart = () => {
+            transcript = '';
+            isRecognitionActive = true;
+            toggleRecognitionStatus();
+        };
+
+        recognition.onresult = (event) => {
+            transcript = event.results[0][0].transcript.trim();
+            transcriptBuffer += ' ' + transcript;
+            console.log("Transcript received:", transcript);
+        };
+
+        recognition.onend = () => {
+            isRecognitionActive = false;
+            toggleRecognitionStatus();
+             // Unless manually stopped, restart speechrecognition
+            if (!manuallyStopped && !isAIGeneratingResponse) {
+                startSpeechRecognition()
+            }
+        };
+
+        recognition.onerror = (event) => {
+            console.error("Speech recognition error:", event.error);
+        };
+
+        recognition.start();
+    }
+
+    function toggleRecognitionStatus() {
+        statusElement.textContent = `Speech Recognition: ${isRecognitionActive ? "ON" : "OFF"}`;
+        statusElement.style.color = isRecognitionActive ? "green" : "red";
+    }
+
+    // Get response from FLASK
     function sendMessage(message) {
         fetch('/chat', {
             method: 'POST',
@@ -105,27 +103,20 @@ document.addEventListener('DOMContentLoaded', function () {
         // 3 Append response data to frontend
         .then(data => {
             // 3.1 Append the message to GUI 
-            if (message !== "__continue_post__") {
-                appendMessage('Sao', data.response);
-            }
+            appendMessage('Sao', data.response);
             // 3.2 Play the audio from received path
             if (recognition) {
                 recognition.abort(); // stop listening before TTS
             }
-            isAISpeaking = true;
             const audio = new Audio(data.audio_url);
+            isAIGeneratingResponse = true;
             audio.play();
+            
             audio.onended = () => {
-                isAISpeaking = false;
-                // Handle auto-continue
-                if (data.auto_continue) {
-                    setTimeout(() => {
-                        sendMessage("__continue_post__");
-                    }, 800); // small pause so it feels natural
-                } else {
-                    startSpeechRecognition(); // normal case
-                }
-                };
+                isAIGeneratingResponse = false;
+                manuallyStopped = false;  // Reset manual state
+                startSpeechRecognition();  // Restart after TTS
+            };
         })
         .catch(error => {
             console.error('Error:', error);
@@ -145,6 +136,8 @@ document.addEventListener('DOMContentLoaded', function () {
         event.preventDefault();
         // 1 Get message
         const message = userInput.value.trim();
+        console.log("TranscriptBuffer before sending:", transcriptBuffer);
+
         if (message) {
             // 1.1 Append message to GUI
             appendMessage('You', message);
@@ -153,24 +146,24 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    stopButton.addEventListener('click', () => {
-        manualStop = true;
-        if (recognition && isListening) {
-            recognition.abort();
-            isListening = false;
-            console.log("Manual stop triggered.");
-        }
-    });
+    // Stop recognition manually with spacebar
+    document.addEventListener('keydown', function (event) {
+        if (event.code === 'Space' && isRecognitionActive && recognition) {
+            manuallyStopped = true;
+            isAIGeneratingResponse = true; 
+            recognition.stop();
 
-    startButton.addEventListener('click', () => {
-        if (!isListening) {
-            manualStop = false;
-            startSpeechRecognition();
-            console.log("Manual start triggered.");
+            toggleRecognitionStatus();
+
+            const message = transcriptBuffer;
+            console.log("TranscriptBuffer before sending:", message);
+            if (message){
+                // Send message to AI
+                sendMessage(message);
+                // Add message to GUI
+                appendMessage("You", message);
+            }
+            transcriptBuffer ='';
         }
     });
 });
-
-
-
-
