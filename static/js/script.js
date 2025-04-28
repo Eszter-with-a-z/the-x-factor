@@ -71,9 +71,21 @@ document.addEventListener('DOMContentLoaded', function () {
             isRecognitionActive = false;
             toggleRecognitionStatus();
              // Unless manually stopped, restart speechrecognition
-            if (!manuallyStopped && !isAIGeneratingResponse) {
-                startSpeechRecognition()
+             if (manuallyStopped) {
+                const message = transcriptBuffer.trim();
+                console.log("TranscriptBuffer before sending:", message);
+        
+                if (message) {
+                    sendMessage(message);
+                    appendMessage("You", message);
+                }
+                transcriptBuffer = '';
+                manuallyStopped = false; // Reset manual flag
+                isAIGeneratingResponse = false;
+            } else if (!isAIGeneratingResponse) {
+                startSpeechRecognition();
             }
+        
         };
 
         recognition.onerror = (event) => {
